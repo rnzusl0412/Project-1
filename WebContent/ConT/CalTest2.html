@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html>
+<title>Full Calendar Example</title> 
+<head>
+<meta charset='utf-8' />
+<link rel="stylesheet" href="http://code.jquery.com/ui/1.11.1/themes/smoothness/jquery-ui.css">
+<link href='../css/fullcalendar.css' rel='stylesheet' />
+<link href='../css/fullcalendar.print.css' rel='stylesheet' media='print' />
+<style>
+    label, input { display:block; }
+    input.text { margin-bottom:12px; width:95%; padding: .4em; }
+    fieldset { padding:0; border:0; margin-top:10px; }
+    textarea { width:95%; overflow:visible;}
+    h1 { font-size: 1.2em; margin: .6em 0; }
+    div#users-contain { width: 350px; margin: 20px 0; }
+    div#users-contain table { margin: 1em 0; border-collapse: collapse; width: 100%; }
+    div#users-contain table td, div#users-contain table th { border: 1px solid #eee; padding: .6em 10px; text-align: left; }
+    .ui-dialog .ui-state-error { padding: .3em; }
+    .validateTips { border: 1px solid transparent; padding: 0.3em; }
+</style>
+ 
+<script src='../js/moment.min.js'></script>
+<script src='../js/jquery.min.js'></script>
+<script src='http://code.jquery.com/ui/1.11.1/jquery-ui.js'></script>
+<script src='../js/fullcalendar.min.js'></script>
+<script src='../js/lang-all.js'></script>
+<script>
+ var dialog, form;
+ var timeList = ["00:00", "00:30", "01:00", "01:30", "02:00", "02:30", "03:00", "03:30", "04:00", "04:30",
+     "05:00", "05:30", "06:00", "06:30", "07:00", "07:30", "08:00", "08:30", "09:00", "09:30",
+     "10:00", "10:30", "11:00", "11:30", "12:00", "12:30", "13:00", "13:30", "14:00", "14:30",
+     "15:00", "15:30", "16:00", "16:30", "17:00", "17:30", "18:00", "18:30", "19:00", "19:30",
+     "20:00", "20:30", "21:00", "21:30", "22:00", "22:30", "23:00", "23:30"];
+ var currentDate = moment().format('YYYY-MM-DD');
+ var currentTime = moment().format('HH:mm');
+ 
+ function setOptionsTimeList(selectName, endHourIndc) {
+  var checkMinute = currentTime.substring(3);
+  var checkHour = currentTime.substring(0,2);
+  var strHour = checkHour;
+  var strMinute = "00";
+  
+  //현재 시간보다 30분 빠르게 시간을 설정.  
+  if (checkMinute < 30) {
+   strMinute = "30";
+  } else {
+   strHour = Number(strHour) + 1;
+   if (strHour < 10) {
+    strHour = "0" + strHour;
+   }  
+  }
+  
+  //시작시간 보다 1시간 늦게 설정.
+  if (endHourIndc) {
+   strHour = Number(strHour) + 1;
+   
+   if (strHour < 10) {
+    strHour = "0" + strHour;
+   }   
+  }
+  
+  //시간 선택 select 박스에서 트겆시간을 선택.
+  $.each(timeList, function(key, val) {
+   var str = "";
+   if (val == (strHour + ":" + strMinute)) {
+    str = "<option value=" + val + " selected='selected'>" + val + "</option>";
+   } else {
+    str = "<option value=" + val + ">" + val + "</option>";
+   }
+   $(selectName).append(str);
+  }); 
+ } 
+  
+ function saveSchedule() {
+  alert('saveSchedule Function');
+  dialog.dialog("close");
+ }  
+ 
+ function setDatePicker(datepicker) {
+  $(datepicker).datepicker({
+     dateFormat:'yy.mm.dd', //선택된 날짜 포맷(yyyy.mm.dd)
+     monthNamesShort: ['1월','2월', '3월', '4월', '5월', '6월', '7월', '8월', '9월', '10월', '11월', '12월'],
+     monthNames: ['1월','2월', '3월', '4월', '5월', '6월', '7월', '8월', '9월', '10월', '11월', '12월'],
+     dayNamesMin: ['일', '월', '화', '수', '목', '금', '토'],   
+     dayNamesShot: ['일', '월', '화', '수', '목', '금', '토'],
+     dayNames: ['일요일', '월요일', '화요일', '수요일', '목요일', '금요일', '토요일'],
+     firstDay: 1, //0: 일요일 부터 시작, 1:월요일 부터 시작
+     autoSize: true, //default: false, input 사이즈를 자동으로 리사이즈.
+     showAnim: "fold", //default: show
+     showButtonPanel: true, //하단에 Today, Done 버튼 Display
+     showWeek: true, //주차 보이기
+     weekHeader: "주차", //default: Wk, 주차 헤드 부분의 명칭 설정
+     changeMonth: true, //월 변경가능
+     changeYear: true, //년 변경가능
+     showMonthAfterYear: true, //년 뒤에 월 표시
+     gotoCurrent: true //default: false, true일 경우에는 Today버튼 클릭 시 현재 일자로 이동하지 못함. false는 가능.
+    });
+ }
+ 
+ //날짜와 시간 선택 부분을 초기화. 모두 선택 가능하도록...
+ function initialDateTime() {
+  $('#startDate').removeAttr('disabled');
+     $('#endDate').removeAttr('disabled');
+     $('#startTime').removeAttr('disabled');
+     $('#endTime').removeAttr('disabled');
+ }
+ 
+ $(document).ready(function() {
+  var currentLangCode = 'ko';  
+  var schedule = new Array();
+
+  // build the language selector's options
+  $.each($.fullCalendar.langs, function(langCode) {
+   $('#lang-selector').append(
+    $('<option/>')
+     .attr('value', langCode)
+     .prop('selected', langCode == currentLangCode)
+     .text(langCode)
+   );
+  });
+
+  // rerender the calendar when the selected option changes
+  $('#lang-selector').on('change', function() {
+   if (this.value) {
+    currentLangCode = this.value;
+    $('#calendar').fullCalendar('destroy');
+    renderCalendar();
+   }
+  });
+
+  dialog = $('#dialog-form').dialog({
+   autoOpen: false,
+   height: 400,
+   width: 450,
+   modal: true,
+   buttons: {
+    "Save": saveSchedule,
+    Cancel: function() {
+     dialog.dialog("close");
+    }
+   },
+   close: function() {
+    form[0].reset();
+    //allFields.removeClass("ui-state-error");
+   }
+  });
+  
+  form = dialog.find( "form" ).on( "submit", function( event ) {
+        event.preventDefault();
+        saveSchedule();
+     });
+   
+     //check box 클릭 이벤트  등록
+     $('#allDay').click(function(){
+      var chk = $(this).is(":checked");
+
+      if (chk) {
+       $('#startDate').attr('disabled', 'disabled');
+       $('#endDate').attr('disabled', 'disabled');
+       $('#startTime').attr('disabled', 'disabled');
+       $('#endTime').attr('disabled', 'disabled');
+      } else {
+       $('#startDate').removeAttr('disabled');
+       $('#endDate').removeAttr('disabled');
+       $('#startTime').removeAttr('disabled');
+       $('#endTime').removeAttr('disabled');
+      }
+     });
+     
+     setDatePicker('#startDate');
+     setDatePicker('#endDate');
+     setOptionsTimeList('#startTime', false);
+     setOptionsTimeList('#endTime', true);
+   
+  function renderCalendar() {
+   $('#calendar').fullCalendar({
+    header: {
+     //left: 'prevYear,prev,next,nextYear today',
+     left: 'prev,next today',
+     center: 'title',
+     right: 'month,agendaWeek,agendaDay'
+    },
+    defaultDate: currentDate,
+    lang: currentLangCode,
+    buttonIcons: false, // show the prev/next text
+    weekNumbers: true,
+    editable: true,
+    eventLimit: true, // allow 'more" link when too many events
+    dayClick: function(date, jsEvent, view) {
+     //alert('Clicked on: ' + date.format());
+     //alert('Coordinates: ' + jsEvent.pageX + ',' + jsEvent.pageY);
+     //alert('Current view: ' + view.name);     
+     dialog.dialog("open");
+     initialDateTime();
+    }    
+   });
+  }    
+     
+  renderCalendar();
+ });
+
+ 
+</script>
+<style>
+
+ body {
+  margin: 0;
+  padding: 0;
+  font-family: "Lucida Grande",Helvetica,Arial,Verdana,sans-serif;
+  font-size: 14px;
+ }
+
+ #top {
+  background: #eee;
+  border-bottom: 1px solid #ddd;
+  padding: 0 10px;
+  line-height: 40px;
+  font-size: 12px;
+ }
+
+ #calendar {
+  max-width: 900px;
+  margin: 40px auto;
+  padding: 0 10px;
+ }
+
+</style>
+</head>
+<body>
+
+ <div id='top'>
+
+  Language:
+  <select id='lang-selector'> </select>
+
+ </div> 
+ 
+ <div id="dialog-form" title="Create new schedule">
+  <form>
+      <fieldset>
+       <label for="title">Title</label>
+       <input type="text" name="title" id="title" class="text ui-widget-content ui-corner-all">
+       <label for="allDay">하루 종일</label>
+       <input type="checkbox" id="allDay">
+       <table>
+        <tr> 
+         <td>     
+          <label for="startDate">Start Date</label>
+         </td>
+         <td>
+          <input type="text" name="startDate" id="startDate">
+         </td>         
+         <td>        
+          <label for="startTime">Start Time</label>
+         </td>
+         <td>     
+        <select id="startTime"></select>
+       </td>
+      </tr>
+      <tr>
+       <td>
+          <label for="endDate">End Date</label>
+      </td>
+      <td>
+          <input type="text" name="endDate" id="endDate">
+      </td>
+      <td>   
+        <label for="endDate">End Time</label>
+      </td>
+      <td>
+        <select id="endTime"></select>
+       </td>
+      </tr>
+     </table>
+     <label for="comments">Comments</label>
+     <textarea id="comments" name="comments"></textarea>
+       <!-- Allow form submission with keyboard without duplicating the dialog button -->
+       <input type="submit" tabindex="-1" style="position:absolute; top:-1000px">
+       </fieldset>
+    </form> 
+ </div> 
+ 
+ <div id='calendar'> </div>
+</body>
+</html>
